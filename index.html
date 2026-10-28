@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ver Além – Aplicativo de Apoio a Pessoas com Deficiência Visual</title>
+  <meta name="description" content="Projeto de extensão: aplicativo com leitor de texto (OCR), GPS com voz e reconhecimento de objetos para pessoas com deficiência visual.">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip" href="#app">Pular para o aplicativo</a>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#inicio" aria-label="Ver Além, início">
+        <span class="brand-icon" aria-hidden="true">👁️</span> Ver Além
+      </a>
+      <nav aria-label="Seções do site" class="nav">
+        <a href="#app">Aplicativo</a>
+        <button type="button" class="nav-about-toggle" data-about-toggle aria-expanded="false" aria-controls="projeto">Sobre o Projeto</button>
+        <a href="#avaliacao">Avaliação</a>
+      </nav>
+      <div class="toolbar" role="toolbar" aria-label="Acessibilidade">
+        <button class="tool" id="btn-voice" aria-pressed="true" title="Ligar ou desligar a voz do aplicativo">🔊 <span class="lbl">Voz ligada</span></button>
+        <label class="tool rate" for="rate">Velocidade
+          <input type="range" id="rate" min="0.6" max="1.6" step="0.1" value="1">
+        </label>
+        <button class="tool" id="btn-font-minus" aria-label="Diminuir letra">A−</button>
+        <button class="tool" id="btn-font-plus" aria-label="Aumentar letra">A+</button>
+        <button class="tool" id="btn-contrast" aria-pressed="false" title="Alto contraste">◐ Contraste</button>
+        <button class="tool" id="btn-mic" aria-pressed="false" title="Comandos de voz (Chrome ou Edge)">🎤 <span class="lbl">Comandos de voz</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main id="inicio">
+    <section class="hero">
+      <div class="wrap">
+        <p class="eyebrow">Projeto de Extensão · Tecnologia Assistiva e Inclusão Digital</p>
+        <h1>Ver Além</h1>
+        <p class="lead">Aplicativo de apoio a pessoas com deficiência visual: auxílio na leitura e na localização, com leitor de texto via OCR, GPS com voz e reconhecimento de objetos.</p>
+        <div class="btn-row">
+          <button class="btn primary big" id="btn-help">🔉 Ouvir instruções de uso</button>
+          <a class="btn big" href="#app">Ir para o aplicativo</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== APLICATIVO ===================== -->
+    <section id="app" class="wrap section" aria-labelledby="h-app">
+      <h2 id="h-app">O Aplicativo</h2>
+      <p class="hint">Escolha um módulo. Tudo roda no seu navegador. As imagens da câmera não são enviadas para nenhum servidor.</p>
+
+      <div class="tabs" role="tablist" aria-label="Módulos do aplicativo">
+        <button role="tab" id="tab-reader" aria-controls="panel-reader" aria-selected="true" data-tab="reader"><span aria-hidden="true">📖</span> Leitor de texto</button>
+        <button role="tab" id="tab-objects" aria-controls="panel-objects" aria-selected="false" tabindex="-1" data-tab="objects"><span aria-hidden="true">🔍</span> Objetos</button>
+        <button role="tab" id="tab-gps" aria-controls="panel-gps" aria-selected="false" tabindex="-1" data-tab="gps"><span aria-hidden="true">🧭</span> GPS com voz</button>
+      </div>
+
+      <!-- LEITOR -->
+      <div role="tabpanel" id="panel-reader" aria-labelledby="tab-reader" class="panel">
+        <h3>Leitor de texto (OCR)</h3>
+        <p class="hint">Aponte a câmera para um texto impresso (rótulo, carta, cardápio) e toque em “Capturar e ler”. O aplicativo avisa se houver pouca luz. Você também pode escolher uma foto já salva.</p>
+        <div class="cam-box">
+          <video id="reader-video" playsinline muted aria-label="Imagem da câmera"></video>
+          <div class="placeholder" id="reader-placeholder">Câmera desligada</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="reader-start">Ligar câmera</button>
+          <button class="btn primary" id="reader-capture" disabled>📷 Capturar e ler</button>
+          <label class="btn" for="reader-file">🖼️ Escolher imagem</label>
+          <input class="sr-only" type="file" id="reader-file" accept="image/*">
+        </div>
+        <progress id="reader-progress" max="1" value="0" hidden aria-label="Progresso da leitura"></progress>
+        <p id="reader-status" class="status"></p>
+        <label for="reader-text" class="field-label">Texto reconhecido</label>
+        <textarea id="reader-text" rows="8" placeholder="O texto lido aparecerá aqui."></textarea>
+        <div class="btn-row">
+          <button class="btn" id="reader-read">🔊 Ler em voz alta</button>
+          <button class="btn" id="reader-stop">⏹ Parar voz</button>
+          <button class="btn" id="reader-copy">📋 Copiar</button>
+          <button class="btn" id="reader-clear">🗑 Limpar</button>
+        </div>
+      </div>
+
+      <!-- OBJETOS -->
+      <div role="tabpanel" id="panel-objects" aria-labelledby="tab-objects" class="panel" hidden>
+        <h3>Reconhecimento de objetos</h3>
+        <p class="hint">Aponte a câmera ao redor. O aplicativo diz o que vê, onde está (à esquerda, à frente, à direita) e avisa quando algo está bem perto. Reconhece 80 tipos de objetos comuns, como pessoa, cadeira, mesa, geladeira, celular, garrafa, carro e semáforo.</p>
+        <div class="cam-box">
+          <video id="obj-video" playsinline muted aria-label="Imagem da câmera"></video>
+          <canvas id="obj-canvas" aria-hidden="true"></canvas>
+          <div class="placeholder" id="obj-placeholder">Câmera desligada</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="obj-start">Ligar câmera e detectar</button>
+          <button class="btn primary" id="obj-describe" disabled>🗣 Descrever o que vejo</button>
+        </div>
+        <label class="check"><input type="checkbox" id="obj-auto" checked> Avisar automaticamente quando surgir um objeto</label>
+        <p id="obj-status" class="status"></p>
+        <h4>Objetos detectados agora</h4>
+        <ul id="obj-list" class="obj-list" aria-label="Objetos detectados"><li class="muted">Nenhum objeto detectado.</li></ul>
+      </div>
+
+      <!-- GPS -->
+      <div role="tabpanel" id="panel-gps" aria-labelledby="tab-gps" class="panel" hidden>
+        <h3>GPS com voz</h3>
+        <p class="hint">Diga ou digite um destino (ex.: “Avenida Paulista, São Paulo”). O aplicativo calcula uma rota a pé e dá orientações por voz. Ele complementa, mas não substitui, a bengala ou o cão-guia.</p>
+        <p id="gps-status" class="status" role="status" aria-live="polite">A localização só será solicitada quando você escolher “Onde estou?” ou iniciar uma rota.</p>
+        <div class="btn-row">
+          <button class="btn" id="gps-where">📍 Onde estou?</button>
+          <button class="btn" id="gps-share">📤 Compartilhar minha localização</button>
+        </div>
+        <label for="gps-dest" class="field-label">Destino</label>
+        <div class="dest-row">
+          <input type="text" id="gps-dest" placeholder="Ex.: Praça da Sé, São Paulo" autocomplete="off">
+          <button class="btn" id="gps-mic" aria-label="Falar o destino">🎤</button>
+          <button class="btn primary" id="gps-go">Ir para o destino</button>
+        </div>
+        <div class="instruction" id="gps-instruction" aria-live="off">Nenhuma navegação ativa.</div>
+        <div class="btn-row">
+          <button class="btn" id="gps-repeat" disabled>🔁 Repetir instrução</button>
+          <button class="btn" id="gps-stop" disabled>⏹ Parar navegação</button>
+          <button class="btn" id="gps-sim" disabled title="Simula uma caminhada para testar sem sair do lugar">🧪 Simular caminhada (teste)</button>
+        </div>
+        <div id="gps-map" class="map" role="img" aria-label="Mapa com sua posição e a rota"></div>
+        <p class="hint small">Mapas © colaboradores do OpenStreetMap, via CARTO. Rotas: FOSSGIS/OSRM. Busca de endereços: Nominatim. Para sua segurança, confirme o trajeto no ambiente real: esta função é experimental e não substitui bengala, cão-guia ou acompanhante.</p>
+      </div>
+    </section>
+
+    <!-- ===================== PROJETO ===================== -->
+    <section id="projeto" class="wrap section" aria-labelledby="h-proj" hidden>
+      <h2 id="h-proj">O Projeto de Extensão</h2>
+      <p class="lead dark">Este projeto de extensão universitária tem como objetivo desenvolver, em conjunto com a comunidade, um aplicativo de apoio a pessoas com deficiência visual, e capacitar os usuários para utilizá-lo com autonomia e segurança.</p>
+
+      <div class="cards">
+        <article class="card">
+          <h3>1. Justificativa</h3>
+          <p>A deficiência visual impõe barreiras cotidianas ao acesso à informação impressa e à mobilidade. Ler um rótulo, conferir a validade de um remédio ou chegar a um endereço desconhecido pode exigir ajuda de terceiros.</p>
+          <p>Os smartphones já têm câmera, GPS e síntese de voz, mas muitas soluções são pagas, estão em outro idioma ou não foram testadas com o público a que se destinam. O projeto busca oferecer uma solução gratuita e em português. A validação com pessoas com deficiência visual e instituições parceiras é uma etapa prevista, em linha com os objetivos de inclusão da Lei Brasileira de Inclusão (Lei nº 13.146/2015) e com a curricularização da extensão (Resolução CNE/CES nº 7/2018).</p>
+        </article>
+
+        <article class="card">
+          <h3>2. Objetivos</h3>
+          <p><strong>Geral:</strong> desenvolver e validar, junto a pessoas com deficiência visual, um aplicativo que auxilie na leitura e na localização.</p>
+          <ul>
+            <li>Levantar as necessidades dos participantes por entrevistas e rodas de conversa.</li>
+            <li>Desenvolver o leitor de texto com OCR e leitura em voz alta.</li>
+            <li>Implementar navegação GPS com orientações por voz para pedestres.</li>
+            <li>Incorporar o reconhecimento de objetos com descrição sonora.</li>
+            <li>Garantir compatibilidade com leitores de tela e diretrizes WCAG.</li>
+            <li>Capacitar os participantes no uso do aplicativo.</li>
+            <li>Formar os alunos de Ciência da Computação com empatia e responsabilidade social.</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <h3>3. Público-alvo e Local</h3>
+          <ul>
+            <li><strong>Público-alvo:</strong> pessoas com deficiência visual (cegueira ou baixa visão), a partir de 16 anos, com ou sem experiência com smartphones, além de familiares e cuidadores.</li>
+            <li><strong>Parceiros:</strong> associações de cegos, centros de reabilitação e instituições de apoio da região.</li>
+            <li><strong>Local:</strong> laboratório da universidade ou espaço da instituição parceira, com acessibilidade, boa iluminação, Wi-Fi e fácil acesso por transporte público.</li>
+          </ul>
+        </article>
+      </div>
+
+      <h3 class="sub">4. Módulos do aplicativo</h3>
+      <div class="table-wrap">
+        <table>
+          <caption class="sr-only">Módulos do aplicativo</caption>
+          <thead><tr><th scope="col">Módulo</th><th scope="col">Finalidade</th><th scope="col">Recursos e tecnologias</th><th scope="col">Público</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Leitor de texto (OCR)</th><td>Auxílio na leitura de textos impressos.</td><td>Câmera, Tesseract.js (OCR em português), síntese de voz do navegador, aviso de pouca luz.</td><td>Pessoas com deficiência visual.</td></tr>
+            <tr><th scope="row">GPS com voz</th><td>Auxílio na localização e no deslocamento.</td><td>API de Geolocalização, OpenStreetMap, rotas a pé, avisos sonoros de direção e distância, compartilhamento de localização.</td><td>Pessoas com deficiência visual.</td></tr>
+            <tr><th scope="row">Reconhecimento de objetos</th><td>Identificação de objetos e do ambiente.</td><td>TensorFlow.js com o modelo COCO-SSD (80 categorias), descrição sonora com posição e proximidade.</td><td>Pessoas com deficiência visual.</td></tr>
+            <tr><th scope="row">Interface acessível</th><td>Uso independente de todas as funções.</td><td>Estrutura semântica e recursos voltados à compatibilidade com leitores de tela, comandos de voz, alto contraste, letra ampliável e botões grandes; recomenda-se validação com usuários e tecnologias assistivas.</td><td>Cegueira e baixa visão.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="sub">5. Metodologia e Cronograma</h3>
+      <p>O projeto adota o design centrado no usuário e o desenvolvimento ágil, em ciclos curtos de construção, teste e ajuste. A metodologia prevê envolver pessoas com deficiência visual na avaliação do protótipo, com participação voluntária e acessível. Até a realização dessas atividades, a validação com o público-alvo deve ser considerada uma etapa futura. Duração prevista: 16 semanas.</p>
+      <ol class="timeline">
+        <li><span class="badge">Semanas 1 a 3</span><h4>Escuta e Planejamento</h4><p>Apresentação às instituições parceiras, estudo sobre deficiência visual e tecnologia assistiva, rodas de conversa, definição de requisitos e tecnologias.</p></li>
+        <li><span class="badge">Semanas 4 a 7</span><h4>Protótipo e Primeiros Testes</h4><p>Desenvolvimento do leitor OCR e da navegação acessível. Oficina 1: teste do protótipo com observação e registro das dificuldades.</p></li>
+        <li><span class="badge">Semanas 8 a 11</span><h4>Localização e Objetos</h4><p>Desenvolvimento do GPS com voz e do reconhecimento de objetos. Oficinas 2 e 3: teste de percurso real supervisionado e de itens do cotidiano.</p></li>
+        <li><span class="badge">Semanas 12 a 14</span><h4>Capacitação dos Participantes</h4><p>Oficina 4: recursos de acessibilidade do smartphone. Oficina 5: uso completo do aplicativo. Material de apoio em áudio, braille e fonte ampliada.</p></li>
+        <li><span class="badge">Semanas 15 e 16</span><h4>Avaliação e Encerramento</h4><p>Testes finais, correções, questionário de satisfação, apresentação pública, entrega de certificados e devolutiva à comunidade.</p></li>
+      </ol>
+
+      <div class="cards">
+        <article class="card">
+          <h3>6. Recursos Necessários</h3>
+          <ul>
+            <li><strong>Humanos:</strong> integrantes da equipe do projeto, professora orientadora e, se possível, apoio de profissional de reabilitação ou educação especial.</li>
+            <li><strong>Materiais:</strong> smartphones com câmera e GPS para testes e empréstimo, fones de ouvido, internet estável, materiais em braille e fonte ampliada, certificados.</li>
+            <li><strong>Infraestrutura:</strong> espaço acessível com mesas, cadeiras e tomadas, ambiente silencioso para testes de voz e trajeto seguro para testes de navegação.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>7. Aspectos Éticos</h3>
+          <p>Se forem realizados testes com participantes, a participação deverá ser voluntária e formalizada por termo de consentimento em formato acessível. O tratamento de dados pessoais deverá observar a LGPD (Lei nº 13.709/2018), com coleta mínima e processamento local sempre que possível. Eventuais testes de deslocamento deverão ocorrer com acompanhamento de monitores e o aplicativo será apresentado como recurso complementar à bengala, ao cão-guia e a outros recursos de mobilidade.</p>
+        </article>
+        <article class="card">
+          <h3>8. Resultados Esperados</h3>
+          <p>Um aplicativo funcional, gratuito e documentado; participantes mais confiantes e independentes na leitura, na locomoção e na identificação de objetos; alunos com visão ampliada do impacto social da tecnologia; e uma parceria duradoura entre a universidade e a comunidade.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ===================== AVALIAÇÃO ===================== -->
+    <section id="avaliacao" class="wrap section" aria-labelledby="h-aval">
+      <h2 id="h-aval">Avaliação de Satisfação e Autoavaliação</h2>
+      <p class="hint">Questionário para os participantes ao final das oficinas. As respostas ficam salvas neste navegador e podem ser baixadas em uma planilha (CSV). Pode ser respondido com o auxílio de um monitor, que lê as perguntas em voz alta.</p>
+      <form id="eval-form" class="card">
+        <label class="field-label" for="eval-name">Nome ou código do participante (opcional)</label>
+        <input type="text" id="eval-name" autocomplete="off">
+
+        <fieldset><legend>1. Consegui usar o aplicativo com facilidade.</legend><div class="scale" data-q="q1"></div></fieldset>
+        <fieldset><legend>2. A leitura de textos foi clara e correta.</legend><div class="scale" data-q="q2"></div></fieldset>
+        <fieldset><legend>3. As orientações de voz do GPS foram úteis.</legend><div class="scale" data-q="q3"></div></fieldset>
+        <fieldset><legend>4. O reconhecimento de objetos me ajudou.</legend><div class="scale" data-q="q4"></div></fieldset>
+        <fieldset><legend>5. Sinto-me mais autônomo(a) com o aplicativo.</legend><div class="scale" data-q="q5"></div></fieldset>
+        <p class="hint small">Escala: 1 = discordo totalmente · 3 = neutro · 5 = concordo totalmente.</p>
+
+        <label class="field-label" for="eval-comment">Comentários e sugestões</label>
+        <textarea id="eval-comment" rows="4"></textarea>
+
+        <div class="btn-row">
+          <button type="submit" class="btn primary">Salvar respostas</button>
+          <button type="button" class="btn" id="eval-export">⬇ Baixar CSV</button>
+          <button type="button" class="btn" id="eval-clear">Apagar todas as respostas</button>
+        </div>
+        <p id="eval-msg" class="status" role="status"></p>
+        <p class="hint small">Respostas salvas: <strong id="eval-count">0</strong></p>
+      </form>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <p><strong>Ver Além</strong> · Projeto de Extensão de Ciência da Computação · Tecnologia Assistiva e Inclusão Digital.</p>
+      <p class="small">Recurso complementar: não substitui bengala, cão-guia ou outros meios de mobilidade. Use com atenção e, nos primeiros testes, com acompanhante.</p>
+    </div>
+  </footer>
+
+  <div id="caption" class="caption" aria-hidden="true" hidden></div>
+
+  <!-- Bibliotecas (baixadas da internet ao abrir a página) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+
+  <!-- Código do aplicativo -->
+  <script src="js/core.js"></script>
+  <script src="js/reader.js"></script>
+  <script src="js/objects.js"></script>
+  <script src="js/gps.js"></script>
+  <script src="js/eval.js"></script>
+  <script>
+    // Mostra os detalhes institucionais somente quando a pessoa solicitar.
+    (() => {
+      const section = document.getElementById('projeto');
+      const toggles = document.querySelectorAll('[data-about-toggle]');
+      if (!section || !toggles.length) return;
+      toggles.forEach(button => {
+        button.addEventListener('click', () => {
+          const shouldOpen = section.hidden;
+          section.hidden = !shouldOpen;
+          toggles.forEach(toggle => toggle.setAttribute('aria-expanded', String(shouldOpen)));
+          if (shouldOpen) {
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const heading = section.querySelector('h2');
+            if (heading) {
+              heading.setAttribute('tabindex', '-1');
+              window.setTimeout(() => heading.focus({ preventScroll: true }), 250);
+            }
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
